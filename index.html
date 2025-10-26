@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Command Console</title>
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Papa Parse (for CSV handling) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tailwind's slate-50 - slightly off-white */
+        }
+        /* Page container styles */
+        .page {
+            display: none; /* All pages are hidden by default */
+        }
+        .page.active {
+            display: block; /* The active page is shown */
+        }
+        
+        /* Hide default file input */
+        input[type="file"] {
+            display: none;
+        }
+        /* Style custom file upload button */
+        .custom-file-upload {
+             display: inline-block;
+             cursor: pointer;
+             transition: all 0.2s ease; /* Added transition */
+        }
+         .custom-file-upload:hover {
+            transform: translateY(-1px); /* Slight lift on hover */
+             filter: brightness(1.1); /* Slightly brighter */
+         }
+
+        /* Styles for role selection buttons */
+        .role-btn {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #e2e8f0; /* slate-200 */
+        }
+        .role-btn.selected {
+             background-color: #eef2ff; /* indigo-50 */
+             color: #4f46e5; /* indigo-600 */
+             border-color: #a5b4fc; /* indigo-300 */
+             font-weight: 600;
+             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+         /* Style for conditionally shown student ID input */
+         #student-id-field {
+             display: none; /* Hidden by default */
+         }
+         
+         /* General Button Style Improvements */
+         .btn {
+             transition: all 0.2s ease;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+         }
+         .btn:hover:not(:disabled) { /* Added :not(:disabled) */
+             transform: translateY(-1px);
+             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+             filter: brightness(1.05);
+         }
+         .btn:active:not(:disabled) { /* Added :not(:disabled) */
+              transform: translateY(0px);
+             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+             filter: brightness(0.95);
+         }
+         .btn-primary {
+             background-color: #4f46e5; /* indigo-600 */
+             color: white;
+         }
+         .btn-primary:hover:not(:disabled) {
+              background-color: #4338ca; /* indigo-700 */
+         }
+          .btn-secondary {
+             background-color: #e2e8f0; /* slate-200 */
+             color: #1e293b; /* slate-800 */
+         }
+         .btn-secondary:hover:not(:disabled) {
+              background-color: #cbd5e1; /* slate-300 */
+         }
+          .btn-success {
+             background-color: #16a34a; /* green-600 */
+             color: white;
+         }
+         .btn-success:hover:not(:disabled) {
+              background-color: #15803d; /* green-700 */
+         }
+          .btn-danger {
+             background-color: #dc2626; /* red-600 */
+             color: white;
+         }
+         .btn-danger:hover:not(:disabled) {
+              background-color: #b91c1c; /* red-700 */
+         }
+         .btn-warning {
+             background-color: #f59e0b; /* amber-500 */
+             color: #422006; /* Darker text for contrast */
+         }
+          .btn-warning:hover:not(:disabled) {
+              background-color: #d97706; /* amber-600 */
+          }
+         .btn-info {
+             background-color: #3b82f6; /* blue-500 */
+             color: white;
+         }
+          .btn-info:hover:not(:disabled) {
+              background-color: #2563eb; /* blue-600 */
+          }
+         
+         /* Input field styling */
+         input[type="email"], input[type="password"], input[type="text"], select {
+             transition: box-shadow 0.2s ease;
+         }
+          input:focus, select:focus {
+              box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); /* indigo focus ring */
+              border-color: #6366f1; /* indigo-500 */
+          }
+
+         /* Card Styling */
+         .card {
+            background-color: white;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-lg */
+            padding: 1.5rem; /* p-6 */
+         }
+         
+         /* Sidebar Active State */
+         .admin-nav-link.active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+         }
+         .admin-nav-link:not(.active):hover {
+            background-color: #374151; /* gray-700 */
+            color: white;
+         }
+         
+         /* Placeholder Chart Bar Style */
+        .chart-bar {
+            background-color: #a5b4fc; /* indigo-300 */
+            border-radius: 4px;
+            transition: height 0.3s ease-out;
+        }
+        .chart-bar:hover {
+             background-color: #6366f1; /* indigo-500 */
+        }
+
+    </style>
+</head>
+<body class="bg-slate-50"> <!-- Changed background slightly -->
+
+    <!-- This is the main container for our single-page app -->
+    <div id="app-container">
+
+        <!-- 
+        ============================================================
+        PAGE 1: LOGIN PAGE (The default active page)
+        ============================================================
+        -->
+        <div id="page-login" class="page active">
+            <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-sky-100 p-4"> <!-- Added subtle gradient -->
+                <div class="w-full max-w-md rounded-xl bg-white p-8 shadow-2xl"> <!-- Enhanced shadow -->
+                    <div class="flex justify-center">
+                        <!-- Icon: University -->
+                        <svg data-lucide="school" class="h-16 w-16 text-indigo-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 10v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M6 10V6a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v4"/><path d="M6 14v-4"/><path d="M18 14v-4"/><path d="M12 18V6"/><path d="M6 18v-2a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v2"/><path d="M18 18v-2a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="m22 10-10-6-10 6"/><path d="M6 18v4"/><path d="M18 18v4"/></svg>
+                    </div>
+                    <h2 id="login-title" class="mt-4 text-center text-3xl font-bold tracking-tight text-gray-900">
+                        Exam Console Login
+                    </h2>
+                    
+                    <!-- Login/Signup Toggle -->
+                    <div class="mt-6 flex justify-center rounded-lg bg-slate-100 p-1"> <!-- Increased rounding -->
+                        <button id="btn-show-login" class="w-1/2 rounded-md bg-white py-2 text-sm font-semibold text-indigo-600 shadow-sm">Login</button> <!-- Changed color, shadow -->
+                        <button id="btn-show-signup" class="w-1/2 rounded-md py-2 text-sm font-semibold text-gray-600 hover:text-gray-900">Sign Up</button>
+                    </div>
+
+                    <!-- Error Message Box -->
+                    <div id="auth-error" class="mt-4 hidden rounded-lg bg-red-50 p-3 text-center text-sm font-medium text-red-700 border border-red-200"> <!-- Added border -->
+                        Error message goes here
+                    </div>
+
+                    <!-- LOGIN SECTION (Visible by default) -->
+                    <div id="login-section">
+                        <!-- Role Selection Buttons -->
+                        <div class="mt-6">
+                            <label class="block text-center text-sm font-medium text-gray-700">Select your role to login:</label>
+                            <div class="mt-2 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 p-2"> <!-- Increased gap -->
+                                <button class="role-btn rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 selected" data-role="admin">Admin</button>
+                                <button class="role-btn rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" data-role="invigilator">Invigilator</button>
+                                <button class="role-btn rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" data-role="student">Student</button>
+                            </div>
+                        </div>
+
+                        <!-- Login Form -->
+                        <form id="login-form" class="mt-5 space-y-5"> <!-- Adjusted spacing -->
+                            <input type="hidden" name="remember" value="true">
+                            <div>
+                                <label for="login-email" class="block text-sm font-medium text-gray-700">Email address</label> 
+                                <input id="login-email" name="email" type="email" autocomplete="email" required class="mt-1 block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"> <!-- Increased rounding -->
+                            </div>
+                            <div>
+                                <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
+                                <input id="login-password" name="password" type="password" autocomplete="current-password" required class="mt-1 block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-primary flex w-full justify-center rounded-lg px-4 py-3 text-sm font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                    <span id="login-spinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                                    <span id="login-text">Sign In</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- SIGN UP SECTION (Hidden by default) -->
+                    <div id="signup-section" class="hidden">
+                         <h3 class="mt-6 text-center text-xl font-semibold text-gray-800">Create New Account</h3>
+                        <!-- Sign Up Form -->
+                        <form id="signup-form" class="mt-4 space-y-4"> 
+                            <div>
+                                <label for="signup-email" class="block text-sm font-medium text-gray-700">Email address</label>
+                                <input id="signup-email" name="email" type="email" autocomplete="email" required class="mt-1 block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                             <div>
+                                <label for="signup-role" class="block text-sm font-medium text-gray-700">Your Role</label>
+                                <select id="signup-role" name="role" required class="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="student">Student</option>
+                                    <option value="invigilator">Invigilator</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                            </div>
+                             <div id="student-id-field">
+                                <label for="signup-student-id" class="block text-sm font-medium text-gray-700">Student ID (Must match ID in students.csv)</label>
+                                <input id="signup-student-id" name="studentId" type="text" required class="mt-1 block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label for="signup-password" class="block text-sm font-medium text-gray-700">Password (min. 6 characters)</label>
+                                <input id="signup-password" name="password" type="password" autocomplete="new-password" required class="mt-1 block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-success flex w-full justify-center rounded-lg px-4 py-3 text-sm font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                    <span id="signup-spinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                                    <span id="signup-text">Create Account</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- 
+        ============================================================
+        PAGE 2: ADMIN DASHBOARD (Hidden by default)
+        ============================================================
+        -->
+        <div id="page-admin-dashboard" class="page">
+            <div class="flex min-h-screen">
+                <!-- Sidebar -->
+                <nav class="flex w-64 flex-col bg-slate-900 text-slate-200 shadow-lg"> <!-- Added shadow -->
+                    <div class="flex items-center space-x-3 border-b border-slate-700 p-5"> 
+                        <svg data-lucide="shield-check" class="h-8 w-8 text-indigo-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span class="text-xl font-semibold">Admin Console</span>
+                    </div>
+                    <div class="flex-1 space-y-1 p-3"> 
+                        <a href="#" class="admin-nav-link active flex items-center space-x-3 rounded-lg p-3" data-page="admin-page-dashboard"> 
+                            <svg data-lucide="layout-dashboard" class="h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center space-x-3 rounded-lg p-3 text-slate-300" data-page="admin-page-data">
+                            <svg data-lucide="database" class="h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                            <span>Data Management</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center space-x-3 rounded-lg p-3 text-slate-300" data-page="admin-page-generate">
+                            <svg data-lucide="play-circle" class="h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> 
+                            <span>Generate Plan</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center space-x-3 rounded-lg p-3 text-slate-300" data-page="admin-page-reports">
+                            <svg data-lucide="file-spreadsheet" class="h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 14h8"/><path d="M8 17h8"/></svg> 
+                            <span>View Reports</span>
+                        </a>
+                    </div>
+                    <div class="border-t border-slate-700 p-4">
+                        <div id="user-email-display" class="mb-2 truncate text-sm text-slate-400" title="Loading...">Loading...</div>
+                        <button id="btn-logout-admin" class="btn btn-danger flex w-full items-center justify-center space-x-2 rounded-lg py-2 text-sm font-semibold">
+                            <svg data-lucide="log-out" class="h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </nav>
+
+                <!-- Main Content Area -->
+                <main class="flex-1 bg-slate-100 p-8"> 
+                    
+                    <!-- Admin Sub-Page: Dashboard (REDESIGNED) -->
+                    <div id="admin-page-dashboard" class="admin-page active">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome, Administrator</h1>
+                        <p class="text-lg text-gray-600 mb-8">Manage exam seating plans efficiently.</p>
+
+                        <!-- Quick Actions -->
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <button class="quick-action-btn flex items-center justify-center space-x-2 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-slate-200 text-indigo-600 hover:text-indigo-800" data-target-page="admin-page-data">
+                                    <svg data-lucide="upload-cloud" class="h-6 w-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                                    <span class="font-semibold">Upload Data</span>
+                                </button>
+                                <button class="quick-action-btn flex items-center justify-center space-x-2 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-slate-200 text-green-600 hover:text-green-800" data-target-page="admin-page-generate">
+                                    <svg data-lucide="play-circle" class="h-6 w-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                                    <span class="font-semibold">Generate Plan</span>
+                                </button>
+                                <button class="quick-action-btn flex items-center justify-center space-x-2 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-slate-200 text-blue-600 hover:text-blue-800" data-target-page="admin-page-reports">
+                                    <svg data-lucide="file-spreadsheet" class="h-6 w-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 14h8"/><path d="M8 17h8"/></svg>
+                                    <span class="font-semibold">View Reports</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Data Overview & Recent Activity -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                             <!-- Data Summary -->
+                            <div class="lg:col-span-1 card">
+                                <h2 class="text-xl font-semibold text-gray-800 mb-4">Data Overview</h2>
+                                <div class="space-y-3 text-gray-700">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">Students Loaded:</span>
+                                        <span id="overview-stat-students" class="font-bold text-lg text-indigo-600">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">Rooms Loaded:</span>
+                                        <span id="overview-stat-rooms" class="font-bold text-lg text-indigo-600">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">Exams Loaded:</span>
+                                        <span id="overview-stat-exams" class="font-bold text-lg text-indigo-600">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center border-t pt-3 mt-3">
+                                        <span class="font-medium">Plans Generated:</span>
+                                        <span id="overview-stat-plans" class="font-bold text-lg text-green-600">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activity Placeholder -->
+                             <div class="lg:col-span-2 card">
+                                <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
+                                <div id="recent-activity-list" class="space-y-2 text-sm text-gray-600 max-h-48 overflow-y-auto"> <!-- Added scroll -->
+                                    <p class="italic">No recent activity recorded.</p> 
+                                </div>
+                                <button id="refresh-activity-btn" class="btn btn-secondary mt-4 rounded-lg px-3 py-1.5 text-xs font-semibold">Refresh Activity</button>
+                            </div>
+                        </div>
+                         
+                         <!-- Simple Chart Placeholder -->
+                         <div class="mt-8 card">
+                             <h2 class="text-xl font-semibold text-gray-800 mb-4">Session Overview (Placeholder)</h2>
+                             <div class="flex justify-around items-end h-40 border-b border-gray-200 pb-2">
+                                 <!-- Bar 1 -->
+                                 <div class="flex flex-col items-center">
+                                     <div class="chart-bar w-10 hover:opacity-80" style="height: 60%;" title="Approx 150 students"></div>
+                                     <span class="text-xs mt-1 text-gray-500">Morning</span>
+                                 </div>
+                                 <!-- Bar 2 -->
+                                  <div class="flex flex-col items-center">
+                                     <div class="chart-bar w-10 hover:opacity-80" style="height: 40%;" title="Approx 100 students"></div>
+                                     <span class="text-xs mt-1 text-gray-500">Afternoon</span>
+                                 </div>
+                                   <!-- Bar 3 -->
+                                  <div class="flex flex-col items-center">
+                                     <div class="chart-bar w-10 hover:opacity-80" style="height: 20%;" title="Approx 50 students"></div>
+                                     <span class="text-xs mt-1 text-gray-500">Evening</span>
+                                 </div>
+                             </div>
+                             <p class="text-sm text-gray-500 mt-2 text-center">Approximate student count per session (Demo Data)</p>
+                         </div>
+
+                    </div>
+
+
+                    <!-- Admin Sub-Page: Data Management (REDESIGNED) -->
+                    <div id="admin-page-data" class="admin-page hidden">
+                        <h1 class="text-3xl font-bold text-gray-900">Data Management</h1>
+                        <p class="mt-2 text-lg text-gray-600 mb-8">Upload required CSV data files.</p>
+
+                        <div class="card max-w-3xl mx-auto"> <!-- Centered card -->
+                            <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-3">Upload Data Files</h2>
+                            <div class="space-y-6">
+                                <!-- Student Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">1. Student Data</label>
+                                    <p class="text-xs text-gray-500 mb-2">Columns required: `id` (must match student login ID), `name`, `subjects` (comma-separated).</p>
+                                    <div class="flex items-center space-x-3">
+                                        <label for="student-file" class="custom-file-upload btn btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
+                                            <svg data-lucide="upload-cloud" class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                                            Choose Students CSV
+                                        </label>
+                                        <input type="file" id="student-file" accept=".csv">
+                                        <span id="student-file-status" class="text-sm text-gray-500 italic">No file selected.</span>
+                                    </div>
+                                </div>
+                                <!-- Room Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">2. Room Data</label>
+                                    <p class="text-xs text-gray-500 mb-2">Columns required: `id`, `capacity` (number), `rows` (number), `cols` (number).</p>
+                                    <div class="flex items-center space-x-3">
+                                        <label for="room-file" class="custom-file-upload btn btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
+                                            <svg data-lucide="upload-cloud" class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                                            Choose Rooms CSV
+                                        </label>
+                                        <input type="file" id="room-file" accept=".csv">
+                                        <span id="room-file-status" class="text-sm text-gray-500 italic">No file selected.</span>
+                                    </div>
+                                </div>
+                                <!-- Exam Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">3. Exam & Session Data</label>
+                                    <p class="text-xs text-gray-500 mb-2">Columns required: `subject`, `session` (e.g., "Morning_Oct_25").</p>
+                                    <div class="flex items-center space-x-3">
+                                        <label for="exam-file" class="custom-file-upload btn btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
+                                             <svg data-lucide="upload-cloud" class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                                            Choose Exams CSV
+                                        </label>
+                                        <input type="file" id="exam-file" accept=".csv">
+                                        <span id="exam-file-status" class="text-sm text-gray-500 italic">No file selected.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-6 text-center">
+                                 <button id="clear-data-btn" class="btn btn-warning rounded-lg px-4 py-2 text-sm font-semibold">
+                                      <svg data-lucide="trash-2" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                     Clear Uploaded Data
+                                </button>
+                                 <p class="text-xs text-gray-500 mt-1">Clears data loaded in this session (doesn't affect database).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Sub-Page: Generate Plan (REDESIGNED) -->
+                    <div id="admin-page-generate" class="admin-page hidden">
+                        <h1 class="text-3xl font-bold text-gray-900">Generate Seating Plan</h1>
+                        <p class="mt-2 text-lg text-gray-600 mb-8">Generate plan for all sessions defined in the uploaded exam data.</p> 
+                        
+                        <div class="card max-w-2xl mx-auto"> 
+                            <div class="space-y-6">
+                                <!-- Session Select Removed -->
+                                <div class="border-t pt-6"> 
+                                    <p class="text-sm font-medium text-gray-700 mb-2">Run the Enhanced Planner for ALL Sessions</p> 
+                                    <p class="text-xs text-gray-500 mb-3">Uses uploaded data to generate plans for all sessions found in exams.csv and allows preview before saving.</p> 
+                                    <button id="btn-run-planner" class="btn btn-success flex w-full items-center justify-center rounded-lg px-6 py-3 text-base font-semibold disabled:opacity-50" disabled>
+                                        <svg data-lucide="play" class="mr-2 h-5 w-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m5 3 14 9-14 9V3z"/></svg>
+                                        Run Planner (All Sessions)
+                                    </button>
+                                     <p id="planner-prerequisite-note" class="mt-2 text-center text-xs text-red-600 font-medium">Requires all three CSV files to be uploaded successfully first.</p>
+                                </div>
+
+                                <!-- Planner Status Area (MODIFIED to include Preview) -->
+                                <div id="planner-status" class="mt-6 hidden border-t pt-6">
+                                    <h3 class="text-center text-lg font-semibold text-gray-800 mb-4">Planner Status & Preview</h3>
+                                    <!-- Loading -->
+                                    <div id="planner-loading" class="hidden flex-col items-center text-center">
+                                        <div class="h-6 w-6 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-2"></div>
+                                        <span id="planner-message" class="font-medium text-gray-700">Generating plan...</span>
+                                    </div>
+                                    
+                                    <!-- Preview Section -->
+                                    <div id="plan-preview-section" class="hidden rounded-lg border border-gray-200 bg-slate-50 p-4">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-3 text-center">Plan Preview</h4>
+                                        <div id="plan-preview-summary" class="text-sm mb-3 space-y-1">
+                                            <!-- Summary text added by JS -->
+                                        </div>
+                                         <!-- Unassigned Students List -->
+                                        <div id="unassigned-students-section" class="hidden text-left mb-3">
+                                             <p class="text-xs font-semibold text-red-800">Students not assigned (Check Capacity/Data):</p> <!-- Modified text -->
+                                             <ul id="unassigned-students-list" class="text-xs text-red-700 list-disc list-inside max-h-20 overflow-y-auto bg-red-100 p-1 rounded border border-red-200">
+                                                 <!-- List items added by JS -->
+                                             </ul>
+                                        </div>
+                                        <div class="flex justify-center space-x-4 mt-4">
+                                             <button id="btn-save-plan" class="btn btn-success rounded-lg px-4 py-2 text-sm font-semibold">
+                                                  <svg data-lucide="save" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                                 Save Plan to Database
+                                            </button>
+                                             <button id="btn-discard-plan" class="btn btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
+                                                   <svg data-lucide="x-circle" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                                                 Discard
+                                            </button>
+                                        </div>
+                                         <div id="save-status" class="text-center mt-3 text-sm"></div> <!-- For save success/error messages -->
+                                    </div>
+
+                                    <!-- Error (Only shown if planner fails critically) -->
+                                    <div id="planner-error" class="hidden rounded-lg bg-red-50 p-4 border border-red-200 text-center">
+                                         <svg data-lucide="alert-circle" class="mx-auto h-10 w-10 text-red-500 mb-2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                         <h3 class="text-sm font-medium text-red-800">Planner Error!</h3>
+                                        <p id="planner-error-message" class="mt-1 text-sm text-red-700">Could not generate plan.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Admin Sub-Page: View Reports -->
+                    <div id="admin-page-reports" class="admin-page hidden">
+                        <h1 class="text-3xl font-bold text-gray-900">View & Export Reports</h1>
+                        <p class="mt-2 text-lg text-gray-600 mb-8">View plans saved in Firestore and export them as CSV.</p>
+
+                        <div class="card"> 
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-semibold text-gray-800">Generated Reports</h2>
+                                 <button id="btn-fetch-plans" class="btn btn-info rounded-lg px-4 py-2 text-sm font-semibold">
+                                      <svg data-lucide="refresh-cw" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                                     Fetch Saved Plans
+                                </button>
+                            </div>
+                            <div id="reports-loading" class="mt-4 hidden text-center text-gray-500">
+                                <div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mr-2"></div>
+                                Loading plans...
+                            </div>
+                            <div id="reports-list" class="mt-6 space-y-4"> 
+                                <p class="text-sm text-gray-500 italic">No plans fetched yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+
+        <!-- 
+        ============================================================
+        PAGE 3: INVIGILATOR DASHBOARD (Hidden by default)
+        ============================================================
+        -->
+        <div id="page-invigilator-dashboard" class="page">
+              <!-- Navbar -->
+             <nav class="flex items-center justify-between bg-white p-4 shadow-md sticky top-0 z-10">
+                <div class="flex items-center space-x-3">
+                    <svg data-lucide="eye" class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span class="text-xl font-semibold text-gray-800">Invigilator Portal</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-email-display-invig" class="text-sm text-gray-600 hidden sm:inline"></span>
+                    <button id="btn-logout-invig" class="btn btn-danger rounded-lg px-4 py-2 text-sm font-semibold">
+                        Logout
+                    </button>
+                </div>
+            </nav>
+            <main class="p-8">
+                <h1 class="text-3xl font-bold text-gray-900">View Generated Plans</h1>
+                <p class="mt-2 text-lg text-gray-600 mb-8">Browse seating plans saved in the system.</p>
+                <!-- Invigilator Plan List -->
+                 <div class="card"> <!-- Added card styling -->
+                     <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Available Plans</h2>
+                        <button id="btn-fetch-plans-invig" class="btn btn-info rounded-lg px-4 py-2 text-sm font-semibold">
+                             <svg data-lucide="refresh-cw" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                            Fetch Saved Plans
+                        </button>
+                    </div>
+                    <div id="invig-reports-loading" class="mt-4 hidden text-center text-gray-500">
+                         <div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mr-2"></div>
+                         Loading plans...
+                    </div>
+                    <div id="invig-reports-list" class="mt-6 space-y-4">
+                        <p class="text-sm text-gray-500 italic">No plans fetched yet.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+        
+        <!-- 
+        ============================================================
+        PAGE 4: STUDENT DASHBOARD (Hidden by default)
+        ============================================================
+        -->
+        <div id="page-student-dashboard" class="page">
+            <!-- Navbar -->
+             <nav class="flex items-center justify-between bg-white p-4 shadow-md sticky top-0 z-10">
+                <div class="flex items-center space-x-3">
+                    <svg data-lucide="user-check" class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg> <!-- Changed icon -->
+                    <span class="text-xl font-semibold text-gray-800">Student Portal</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-email-display-student" class="text-sm text-gray-600 hidden sm:inline"></span>
+                    <button id="btn-logout-student" class="btn btn-danger rounded-lg px-4 py-2 text-sm font-semibold">
+                        Logout
+                    </button>
+                </div>
+            </nav>
+            <main class="p-8">
+                <h1 class="text-3xl font-bold text-gray-900">Your Exam Details</h1>
+                 <p class="mt-2 text-lg text-gray-600 mb-8">Your seating assignment based on the latest generated plan.</p>
+                 
+                  <!-- Loading State -->
+                 <div id="student-loading" class="mt-8 text-center text-gray-500">
+                     <div class="inline-block h-6 w-6 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-2"></div>
+                     <p>Loading your details...</p>
+                 </div>
+                 
+                 <!-- Assignment Found State -->
+                 <div id="student-assignment" class="mt-8 hidden max-w-2xl mx-auto card"> <!-- Centered card -->
+                    <h2 id="student-session-title" class="text-2xl font-bold text-gray-800 text-center mb-6">Session Details</h2>
+                    <div class="border-t border-gray-200 pt-6">
+                        <dl class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">Student ID</dt>
+                                <dd id="student-name-id" class="mt-1 text-lg font-semibold text-gray-900"></dd>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">Exam Session</dt>
+                                <dd id="student-session" class="mt-1 text-lg font-semibold text-gray-900"></dd>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">Assigned Room</dt>
+                                <dd id="student-room" class="mt-1 text-2xl font-bold text-indigo-600"></dd>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">Seat Number</dt>
+                                <dd id="student-seat" class="mt-1 text-2xl font-bold text-indigo-600"></dd>
+                            </div>
+                        </dl>
+                        <!-- Download Button Removed -->
+                    </div>
+                 </div>
+                 
+                  <!-- No Assignment Found State -->
+                 <div id="student-no-assignment" class="mt-8 hidden rounded-xl bg-yellow-50 p-6 text-center border border-yellow-200">
+                     <svg data-lucide="alert-triangle" class="mx-auto h-12 w-12 text-yellow-400" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                    <p class="mt-4 text-lg font-medium text-yellow-800">Assignment Not Found</p>
+                    <p class="mt-2 text-sm text-yellow-700">
+                        No seating assignment was found for your Student ID in the most recent plan generated by the administrator. Please check back later or contact support if you believe this is an error.
+                    </p>
+                 </div>
+            </main>
+        </div>
+
+    </div> <!-- End #app-container -->
+
+
+    <!-- 
+    ============================================================
+    JAVASCRIPT (All our logic + Firebase)
+    ============================================================
+    -->
+    <!-- Load Lucide Icons Script at the end of body -->
+    <script src="https://unpkg.com/lucide-icons"></script> 
+    
+    <script type="module">
+        // --- 3. FIREBASE SDK IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc,
+            addDoc,
+            collection,
+            query,
+            getDocs,
+            orderBy, // Import orderBy
+            limit // Import limit
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
+        
+        // --- 4. FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCe0Y-EHnQoKVdhfWFEzOkUeKrytflCokI", 
+          authDomain: "my-exam-project-3a1f6.firebaseapp.com", 
+          projectId: "my-exam-project-3a1f6", 
+          storageBucket: "my-exam-project-3a1f6.firebasestorage.app", 
+          messagingSenderId: "982368272465", 
+          appId: "1:982368272465:web:1d168ebb500d47dc6cf870", 
+          measurementId: "G-P7LRPW8EP0" 
+        };
+        // (Make sure your real keys are pasted above)
+        
+        // --- 5. INITIALIZE FIREBASE ---
+        const appId = firebaseConfig.projectId || 'default-app-id';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        console.log("Firebase Initialized with Project ID:", appId);
+
+        // --- 6. GLOBAL VARIABLES ---
+        
+        // Data Storage
+        let uploadedStudents = [];
+        let uploadedRooms = [];
+        let uploadedExams = [];
+        let currentUserStudentId = null; // Store current user's STUDENT ID if student
+        let currentGeneratedPlan = null; // Store the latest generated plan before saving (NEW)
+
+        // Page Containers
+        const pages = {
+            'login': document.getElementById('page-login'),
+            'admin': document.getElementById('page-admin-dashboard'),
+            'invigilator': document.getElementById('page-invigilator-dashboard'),
+            'student': document.getElementById('page-student-dashboard')
+        };
+        
+        // Auth Forms & Elements
+        const loginSection = document.getElementById('login-section'); 
+        const signupSection = document.getElementById('signup-section'); 
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const btnShowLogin = document.getElementById('btn-show-login');
+        const btnShowSignup = document.getElementById('btn-show-signup');
+        const roleButtons = document.querySelectorAll('.role-btn'); 
+        const loginTitle = document.getElementById('login-title'); 
+        const authError = document.getElementById('auth-error');
+        const loginSpinner = document.getElementById('login-spinner');
+        const loginText = document.getElementById('login-text');
+        const signupSpinner = document.getElementById('signup-spinner');
+        const signupText = document.getElementById('signup-text');
+        const signupRoleSelect = document.getElementById('signup-role'); 
+        const studentIdField = document.getElementById('student-id-field'); 
+        const signupStudentIdInput = document.getElementById('signup-student-id'); 
+
+
+        // Logout Buttons
+        const logoutButtons = [
+            document.getElementById('btn-logout-admin'),
+            document.getElementById('btn-logout-invig'),
+            document.getElementById('btn-logout-student')
+        ].filter(Boolean); 
+        
+        // Admin Page Elements
+        const adminNavLinks = document.querySelectorAll('.admin-nav-link');
+        const adminPages = document.querySelectorAll('.admin-page');
+        const quickActionButtons = document.querySelectorAll('.quick-action-btn'); 
+        const overviewStatStudents = document.getElementById('overview-stat-students'); 
+        const overviewStatRooms = document.getElementById('overview-stat-rooms');     
+        const overviewStatExams = document.getElementById('overview-stat-exams');     
+        const overviewStatPlans = document.getElementById('overview-stat-plans');     
+        const recentActivityList = document.getElementById('recent-activity-list'); 
+        const refreshActivityBtn = document.getElementById('refresh-activity-btn'); 
+
+        
+        // Data Management Elements
+        const studentFileInput = document.getElementById('student-file');
+        const studentFileStatus = document.getElementById('student-file-status');
+        const roomFileInput = document.getElementById('room-file');
+        const roomFileStatus = document.getElementById('room-file-status');
+        const examFileInput = document.getElementById('exam-file');
+        const examFileStatus = document.getElementById('exam-file-status');
+        const clearDataBtn = document.getElementById('clear-data-btn'); 
+
+        // Planner Elements
+        const btnRunPlanner = document.getElementById('btn-run-planner');
+        // const sessionSelect = document.getElementById('session-select'); // Removed ref
+        const plannerStatus = document.getElementById('planner-status');
+        const plannerLoading = document.getElementById('planner-loading'); 
+        const plannerMessage = document.getElementById('planner-message');
+        const plannerPrerequisiteNote = document.getElementById('planner-prerequisite-note'); 
+        
+        // Plan Preview Elements (NEW)
+        const planPreviewSection = document.getElementById('plan-preview-section');
+        const planPreviewSummary = document.getElementById('plan-preview-summary');
+        const unassignedStudentsSectionPreview = document.getElementById('unassigned-students-section'); // Reused ID for preview
+        const unassignedStudentsListPreview = document.getElementById('unassigned-students-list'); // Reused ID for preview
+        const btnSavePlan = document.getElementById('btn-save-plan');
+        const btnDiscardPlan = document.getElementById('btn-discard-plan');
+        const saveStatus = document.getElementById('save-status');
+
+        // Planner Error Elements (Used only for critical failures now)
+        const plannerError = document.getElementById('planner-error');
+        const plannerErrorMessage = document.getElementById('planner-error-message');
+        
+        // Reports Elements (Admin)
+        const btnFetchPlans = document.getElementById('btn-fetch-plans');
+        const reportsLoading = document.getElementById('reports-loading');
+        const reportsList = document.getElementById('reports-list');
+
+        // Invigilator Reports Elements
+        const btnFetchPlansInvig = document.getElementById('btn-fetch-plans-invig');
+        const invigReportsLoading = document.getElementById('invig-reports-loading');
+        const invigReportsList = document.getElementById('invig-reports-list');
+
+        // Student Dashboard Elements 
+        const studentLoading = document.getElementById('student-loading');
+        const studentAssignment = document.getElementById('student-assignment');
+        const studentNoAssignment = document.getElementById('student-no-assignment');
+        const studentSessionTitle = document.getElementById('student-session-title');
+        const studentNameId = document.getElementById('student-name-id');
+        const studentSession = document.getElementById('student-session');
+        const studentRoom = document.getElementById('student-room');
+        const studentSeat = document.getElementById('student-seat');
+
+        // User Email Displays
+        const userEmailDisplays = {
+            admin: document.getElementById('user-email-display'),
+            invigilator: document.getElementById('user-email-display-invig'),
+            student: document.getElementById('user-email-display-student')
+        };
+        
+        // --- 7. HELPER FUNCTIONS ---
+
+        function showPage(pageId) { /* ... keep ... */ 
+             console.log("Showing page:", pageId);
+            for (const id in pages) {
+                if (pages[id]) { 
+                    if (id === pageId) {
+                        pages[id].classList.add('active');
+                    } else {
+                        pages[id].classList.remove('active');
+                    }
+                }
+            }
+        }
+        function showAuthError(message) { /* ... keep ... */
+            if (!authError) return;
+            authError.textContent = message;
+            authError.classList.remove('hidden');
+         }
+        function hideAuthError() { /* ... keep ... */
+             if (!authError) return;
+             authError.classList.add('hidden');
+         }
+        // Modified to show/hide student ID field based on role selection in signup
+        function toggleAuthMode(showLogin) {
+             if (!loginSection || !signupSection || !loginTitle || !btnShowLogin || !btnShowSignup) return;
+             if (showLogin) {
+                 loginSection.classList.remove('hidden');
+                 signupSection.classList.add('hidden');
+                 loginTitle.textContent = "Exam Console Login"; 
+                 btnShowLogin.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
+                 btnShowLogin.classList.remove('text-gray-600', 'hover:text-gray-900');
+                 btnShowSignup.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600');
+                 btnShowSignup.classList.add('text-gray-600', 'hover:text-gray-900');
+             } else {
+                 loginSection.classList.add('hidden');
+                 signupSection.classList.remove('hidden');
+                 loginTitle.textContent = "Create New Account"; 
+                 btnShowLogin.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600');
+                 btnShowLogin.classList.add('text-gray-600', 'hover:text-gray-900');
+                 btnShowSignup.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
+                 btnShowSignup.classList.remove('text-gray-600', 'hover:text-gray-900');
+                 toggleStudentIdFieldVisibility(); 
+             }
+             hideAuthError(); 
+         }
+        function setAuthLoading(form, isLoading) { /* ... keep ... */
+             if (form === 'login') {
+                if(loginSpinner) loginSpinner.classList.toggle('hidden', !isLoading);
+                if(loginText) loginText.classList.toggle('hidden', isLoading);
+            } else {
+                if(signupSpinner) signupSpinner.classList.toggle('hidden', !isLoading);
+                if(signupText) signupText.classList.toggle('hidden', isLoading);
+            }
+        }
+        function generateSeatNames(rows, cols) { /* ... keep ... */ 
+            const seats = [];
+            for (let r = 0; r < rows; r++) {
+                const rowLetter = String.fromCharCode(65 + r); // A, B, C...
+                for (let c = 1; c <= cols; c++) {
+                    const seatNum = String(c).padStart(2, '0'); 
+                    seats.push(`${rowLetter}${seatNum}`);
+                }
+            }
+            return seats;
+        }
+         // **NEW**: Function to show/hide student ID input based on selected role
+         function toggleStudentIdFieldVisibility() {
+             if (!signupRoleSelect || !studentIdField || !signupStudentIdInput) return; // Add null checks
+             const selectedRole = signupRoleSelect.value;
+             if (selectedRole === 'student') {
+                 studentIdField.style.display = 'block';
+                 signupStudentIdInput.required = true; // Make it required only for students
+             } else {
+                 studentIdField.style.display = 'none';
+                 signupStudentIdInput.required = false; // Not required for others
+                 signupStudentIdInput.value = ''; // Clear value if role changes
+             }
+         }
+
+        // --- 7.5 CSV PARSING AND EXPORT ---
+
+        function convertArrayToCSV(data) { /* ... keep ... */ 
+            if (!data || data.length === 0) {
+                return "";
+            }
+             const headers = ["studentId", "studentName", "roomId", "seat", "sessionId"]; // Added sessionId
+            const csvRows = [headers.join(',')]; 
+            for (const row of data) {
+                const values = headers.map(header => {
+                    let value = row[header]; 
+                    if (value === null || value === undefined) {
+                        value = "";
+                    } else if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                         value = `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                });
+                csvRows.push(values.join(','));
+            }
+            return csvRows.join('\n');
+        }
+
+        function exportToCSV(csvString, filename) { /* ... keep ... */ 
+             if (!csvString) return;
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                 URL.revokeObjectURL(url); 
+            }
+        }
+
+        function handleFileUpload(fileInput, statusElement, dataTarget) { /* ... keep ... */ 
+            if (!fileInput || !statusElement) return; // Add null checks
+            const file = fileInput.files[0];
+            if (!file) {
+                statusElement.textContent = "No file selected.";
+                statusElement.classList.remove('text-green-600', 'text-red-600', 'text-blue-600', 'italic');
+                statusElement.classList.add('text-gray-500', 'italic');
+                checkAllFilesUploaded(); 
+                return;
+            }
+
+            statusElement.textContent = "Parsing...";
+            statusElement.classList.remove('text-gray-500', 'text-red-600', 'text-green-600', 'italic');
+            statusElement.classList.add('text-blue-600');
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true, 
+                complete: function(results) {
+                    console.log(`Parsed ${dataTarget} data:`, results.data);
+                    let validRecords = 0; // Count valid records
+                    
+                    if (dataTarget === 'students') {
+                        const processedStudents = results.data.map(student => {
+                            student.id = student.id ? String(student.id).trim() : null; 
+                            if (!student.id) return null; // Skip if no ID
+
+                             if (student.subjects && typeof student.subjects === 'string') {
+                                student.subjects = student.subjects.split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean); // Filter empty strings
+                            } else if (student.subjects) {
+                                student.subjects = [String(student.subjects).trim()]; 
+                            } else {
+                                student.subjects = []; 
+                            }
+                             // Ensure name is string
+                             student.name = student.name ? String(student.name) : 'N/A';
+                            return student;
+                        }).filter(Boolean); // Remove null entries
+                        uploadedStudents = processedStudents;
+                        validRecords = uploadedStudents.length;
+                    }
+                    else if (dataTarget === 'rooms') {
+                         const processedRooms = results.data.map(room => {
+                             room.id = room.id ? String(room.id).trim() : null; 
+                             if (!room.id) return null;
+                              // Ensure numeric types
+                              room.capacity = Number(room.capacity);
+                              room.rows = Number(room.rows);
+                              room.cols = Number(room.cols);
+                              // Add validation for NaN or non-positive numbers
+                              if (isNaN(room.capacity) || room.capacity <= 0 || 
+                                  isNaN(room.rows) || room.rows <= 0 || 
+                                  isNaN(room.cols) || room.cols <= 0) {
+                                   console.warn("Invalid numeric data in room, skipping:", room);
+                                   return null;
+                              }
+                             return room;
+                         }).filter(Boolean);
+                         uploadedRooms = processedRooms;
+                         validRecords = uploadedRooms.length;
+                    }
+                    else if (dataTarget === 'exams') {
+                         const processedExams = results.data.map(exam => {
+                             exam.subject = exam.subject ? String(exam.subject).trim() : null; 
+                             exam.session = exam.session ? String(exam.session).trim() : null; 
+                             if (!exam.subject || !exam.session) return null;
+                             return exam;
+                         }).filter(Boolean);
+                         uploadedExams = processedExams;
+                         validRecords = uploadedExams.length;
+                         // populateSessionSelect(); // Don't need this anymore
+                    }
+
+                    statusElement.textContent = `Success! ${validRecords} valid records loaded.`;
+                    statusElement.classList.remove('text-blue-600', 'text-red-600', 'text-gray-500', 'italic');
+                    statusElement.classList.add('text-green-600');
+                    updateDashboardStats(); 
+                    checkAllFilesUploaded(); 
+                    updateRecentActivity(`Uploaded ${dataTarget} data (${validRecords} records).`); // Log upload
+                },
+                error: function(error) {
+                    console.error(`Error parsing ${dataTarget} CSV:`, error);
+                    statusElement.textContent = `Error: ${error.message}`;
+                    statusElement.classList.remove('text-blue-600', 'text-green-600', 'text-gray-500', 'italic');
+                    statusElement.classList.add('text-red-600');
+                    
+                     if (dataTarget === 'students') uploadedStudents = [];
+                     else if (dataTarget === 'rooms') uploadedRooms = [];
+                     else if (dataTarget === 'exams') uploadedExams = [];
+                    updateDashboardStats();
+                    checkAllFilesUploaded(); 
+                     updateRecentActivity(`Error uploading ${dataTarget} data.`); // Log error
+                }
+            });
+        }
+        
+        // --- 7.6 ENHANCED PLANNER FUNCTION ---
+         // **MODIFIED:** V7 - Refined version of V6
+        function generateEnhancedPlan(students, rooms, exams, sessionId) {
+            console.log(`[Planner V7] Starting for session: ${sessionId}`);
+            const plan = [];
+            const unassignedStudents = []; // Store full student object if unassigned
+
+            // 1. Validation & Deep Copy (to avoid modifying uploaded data)
+             if (!students || students.length === 0) return { plan, unassignedStudents, message: "Student data missing or empty." };
+             if (!rooms || rooms.length === 0) return { plan, unassignedStudents, message: "Room data missing or empty." };
+             if (!exams || exams.length === 0) return { plan, unassignedStudents, message: "Exam data missing or empty." };
+             
+             // Create copies to avoid modifying originals during processing
+             const currentStudents = JSON.parse(JSON.stringify(students));
+             const currentRooms = JSON.parse(JSON.stringify(rooms));
+             const currentExams = JSON.parse(JSON.stringify(exams));
+
+             console.log(`[Planner V7] Input counts - Students: ${currentStudents.length}, Rooms: ${currentRooms.length}, Exams: ${currentExams.length}`);
+
+            // 2. Filter Data for Session
+            const subjectsInSession = currentExams
+                .filter(exam => exam.session && String(exam.session).trim() === sessionId) 
+                .map(exam => exam.subject ? String(exam.subject).trim() : null) 
+                .filter(Boolean); 
+            if (subjectsInSession.length === 0) return { plan, unassignedStudents, message: `No valid exams found for session '${sessionId}'.` };
+            console.log(`[Planner V7] Subjects in session ${sessionId}:`, subjectsInSession);
+
+            const studentsToSeat = currentStudents.filter(student => {
+                 const studentId = student.id ? String(student.id).trim() : null; 
+                 if (!studentId) {
+                     console.warn("[Planner V7] Skipping student with missing ID:", student);
+                     return false; 
+                 }
+                 const studentSubjects = Array.isArray(student.subjects) ? student.subjects.map(s => String(s).trim()) : []; 
+                 const needsSeat = studentSubjects.some(sub => subjectsInSession.includes(sub));
+                 return needsSeat;
+            });
+             const initialStudentCount = studentsToSeat.length; 
+            if (initialStudentCount === 0) return { plan, unassignedStudents, message: `No students found taking exams (${subjectsInSession.join(', ')}) in session '${sessionId}'.` };
+            console.log(`[Planner V7] Found ${initialStudentCount} students to seat:`, studentsToSeat.map(s=>s.id));
+
+            // 3. Prepare Rooms & Calculate Total Capacity
+            let roomAllotments = {};
+            let totalCapacity = 0;
+            const validRoomIds = []; 
+            currentRooms.forEach(room => {
+                 const roomId = room.id ? String(room.id).trim() : null; 
+                 if (!roomId) { console.warn("[Planner V7] Room skipped, missing ID:", room); return; }
+                const capacity = parseInt(room.capacity, 10); 
+                const rows = parseInt(room.rows, 10); 
+                const cols = parseInt(room.cols, 10); 
+                 if (isNaN(capacity) || isNaN(rows) || isNaN(cols) || capacity <= 0 || rows <= 0 || cols <= 0) {
+                     console.warn(`[Planner V7] Invalid room data for ID ${roomId}. Skipping.`);
+                     return; 
+                 }
+                 const generatedSeats = generateSeatNames(rows, cols);
+                 if (generatedSeats.length < capacity) {
+                      console.warn(`[Planner V7] Room ${roomId} skipped: Capacity (${capacity}) > seats (${generatedSeats.length}).`);
+                      return;
+                 }
+
+                roomAllotments[roomId] = {
+                    id: roomId,
+                    capacity: capacity, 
+                    assignedCount: 0, 
+                    seats: generatedSeats, 
+                };
+                totalCapacity += capacity;
+                validRoomIds.push(roomId); 
+                console.log(`[Planner V7] Room ${roomId} prepared. Capacity: ${capacity}, Seats: ${generatedSeats.length}`);
+            });
+
+             if (validRoomIds.length === 0) return { plan, unassignedStudents, message: "No valid rooms found." };
+             console.log(`[Planner V7] Total available capacity: ${totalCapacity}`);
+             
+             // *** THE CRITICAL CHECK ***
+             if (initialStudentCount > totalCapacity) {
+                  console.error(`[Planner V7] Capacity Error: ${initialStudentCount} students vs ${totalCapacity} seats.`);
+                   studentsToSeat.forEach(s => unassignedStudents.push(s)); 
+                  return { plan: [], unassignedStudents, message: `Error: Not enough capacity! ${initialStudentCount} students need seats, only ${totalCapacity} total available.` };
+             }
+
+            // 4. Assign Students
+            const assignedStudentIds = new Set(); 
+            console.log("[Planner V7] Starting assignment loop...");
+            for (const student of studentsToSeat) {
+                let assigned = false;
+                const studentId = String(student.id).trim(); 
+                 // console.log(`[Planner V7]   Assigning student ${studentId}...`);
+                 
+                for (const roomId of validRoomIds) { 
+                    const room = roomAllotments[roomId];
+                    if (Number(room.assignedCount) < Number(room.capacity)) { 
+                        const seatIndex = room.assignedCount; 
+                        const seat = room.seats[seatIndex];
+                        if (!seat) {
+                            console.error(`[Planner V7]     Seat Gen Error: Index ${seatIndex} invalid for room ${roomId}.`);
+                            continue; 
+                        }
+                        const assignment = {
+                            studentId: studentId, 
+                            studentName: student.name || 'N/A', 
+                            roomId: room.id,
+                            seat: seat
+                        };
+                        plan.push(assignment);
+                        room.assignedCount++; 
+                        assigned = true;
+                        assignedStudentIds.add(studentId); 
+                        // console.log(`[Planner V7]     ----> Assigned ${studentId} to ${roomId} seat ${seat} (${room.assignedCount}/${room.capacity})`);
+                        break; // Go to next student
+                    } 
+                } 
+                if (!assigned) {
+                     // This should only happen if capacity check failed earlier but wasn't caught somehow.
+                     console.error(`[Planner V7]   CRITICAL FAILURE for student ${studentId}. No seat found.`);
+                     unassignedStudents.push(student); 
+                }
+            } 
+            console.log("[Planner V7] Assignment loop finished.");
+            
+            // 5. Final check and message construction
+             let message = "";
+             // Verify against initial list
+             studentsToSeat.forEach(s => {
+                 const sid = String(s.id).trim();
+                 if (!assignedStudentIds.has(sid) && !unassignedStudents.some(us => String(us.id).trim() === sid)) {
+                     console.warn(`[Planner V7] Student ${sid} missed. Adding to unassigned.`);
+                     unassignedStudents.push(s);
+                 }
+             });
+
+             if (unassignedStudents.length === 0) {
+                 if (plan.length === initialStudentCount) {
+                     message = `Successfully seated all ${initialStudentCount} students.`;
+                     console.log(`[Planner V7] ${message}`);
+                 } else {
+                      message = `Error: Seated ${plan.length} but expected ${initialStudentCount}. Unknown assignment error.`;
+                      console.error(`[Planner V7] ${message}`);
+                 }
+             } else {
+                 message = `Warning: Seated ${plan.length} out of ${initialStudentCount} students. Could not assign ${unassignedStudents.length} students.`;
+                 console.warn(`[Planner V7] ${message}`, "Unassigned:", unassignedStudents.map(s=>s.id));
+             }
+
+            console.log("[Planner V7] Final generated plan length:", plan.length);
+            return { plan, unassignedStudents, message }; 
+        }
+
+
+        // --- 7.7 UI UPDATE FUNCTIONS ---
+        function updateDashboardStats() { /* ... keep ... */ 
+            const studentCount = uploadedStudents.length;
+            const roomCount = uploadedRooms.length;
+            const examCount = uploadedExams.length;
+             // Update overview stats
+             if (overviewStatStudents) overviewStatStudents.textContent = studentCount;
+             if (overviewStatRooms) overviewStatRooms.textContent = roomCount;
+             if (overviewStatExams) overviewStatExams.textContent = examCount;
+         }
+        // Removed populateSessionSelect as dropdown is removed
+        // function populateSessionSelect() { ... } 
+
+        function checkAllFilesUploaded() { /* ... keep ... */ 
+            const allUploaded = uploadedStudents.length > 0 && uploadedRooms.length > 0 && uploadedExams.length > 0;
+            if (btnRunPlanner) btnRunPlanner.disabled = !allUploaded; // Add null check
+             if (plannerPrerequisiteNote) {
+                 plannerPrerequisiteNote.style.display = allUploaded ? 'none' : 'block';
+             }
+             if (allUploaded) {
+                 console.log("All files uploaded, enabling planner button.");
+             } else {
+                  console.log("Waiting for all files to be uploaded.");
+             }
+             return allUploaded;
+        }
+         // **NEW**: Update recent activity feed (simple version)
+        function updateRecentActivity(message) {
+             if (!recentActivityList) return;
+             const placeholder = recentActivityList.querySelector('.italic');
+             if (placeholder) placeholder.remove();
+             
+             const activityItem = document.createElement('div');
+             activityItem.className = 'p-2 border-b border-slate-100 text-xs';
+             activityItem.innerHTML = `${message} <span class="text-gray-400">- ${new Date().toLocaleTimeString()}</span>`;
+             recentActivityList.insertBefore(activityItem, recentActivityList.firstChild);
+             // Limit activity list size
+             while (recentActivityList.children.length > 5) { 
+                 recentActivityList.removeChild(recentActivityList.lastChild);
+             }
+         }
+
+        // --- 7.8 FETCH AND DISPLAY PLANS ---
+        // (Keep V3 - accepts studentIdToFind)
+        async function fetchAndDisplayPlans(listElement, loadingElement, studentIdToFind = null, targetRole = 'admin') {
+            if (!loadingElement) return; // Add null check
+            loadingElement.classList.remove('hidden');
+            if (listElement) listElement.innerHTML = ''; 
+            let planCount = 0;
+            let foundAssignment = false; 
+
+            try {
+                const plansRef = collection(db, `artifacts/${appId}/public/data/plans`);
+                 const q = query(plansRef, orderBy("generatedAt", "desc")); 
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    if(listElement) listElement.innerHTML = '<p class="text-sm text-gray-500 italic">No plans found.</p>'; 
+                     if(targetRole === 'student') { 
+                         if (studentLoading) studentLoading.classList.add('hidden');
+                         if (studentAssignment) studentAssignment.classList.add('hidden');
+                         if (studentNoAssignment) studentNoAssignment.classList.remove('hidden');
+                    }
+                     if (overviewStatPlans) overviewStatPlans.textContent = 0;
+                } else {
+                    querySnapshot.forEach((doc) => { 
+                        planCount++;
+                        const planData = doc.data();
+                        const planId = doc.id;
+                        const allotments = planData.roomAllotments || [];
+                        const savedSessionId = planData.sessionId || 'N/A'; // Get session ID from saved plan
+
+                         // --- Logic for STUDENT ---
+                          // Search *all plans* for the student ID (most recent match will be displayed due to ordering)
+                         if (targetRole === 'student' && studentIdToFind && !foundAssignment) { 
+                             console.log(`Searching for studentId ${studentIdToFind} in plan ${planId} for session ${savedSessionId}`);
+                             const assignment = allotments.find(a => 
+                                 a.studentId && String(a.studentId).trim().toLowerCase() === String(studentIdToFind).trim().toLowerCase()
+                             );
+                            if (assignment) {
+                                console.log("Assignment found:", assignment);
+                                 if (studentLoading) studentLoading.classList.add('hidden');
+                                 if (studentNoAssignment) studentNoAssignment.classList.add('hidden');
+                                 if (studentAssignment) studentAssignment.classList.remove('hidden');
+                                 if (studentSessionTitle) studentSessionTitle.textContent = `Session: ${savedSessionId}`; // Use saved session
+                                 if (studentNameId) studentNameId.textContent = `${assignment.studentName || 'N/A'} (${assignment.studentId})`; 
+                                 if (studentSession) studentSession.textContent = savedSessionId; // Use saved session
+                                 if (studentRoom) studentRoom.textContent = assignment.roomId;
+                                 if (studentSeat) studentSeat.textContent = assignment.seat;
+                                foundAssignment = true; // Found the latest assignment
+                            } else {
+                                console.log(`Student ID ${studentIdToFind} not found in allotments for plan ${planId}.`);
+                            }
+                         } 
+                         // --- Logic for ADMIN and INVIGILATOR ---
+                         else if ((targetRole === 'admin' || targetRole === 'invigilator') && listElement) {
+                             const reportDiv = document.createElement('div');
+                             reportDiv.className = 'flex items-center justify-between rounded-lg border border-gray-200 p-4 bg-white hover:bg-slate-50 transition-colors'; 
+                             reportDiv.innerHTML = `
+                                 <div>
+                                    <h3 class="font-medium text-gray-800">Plan for ${savedSessionId}</h3> <!-- Use saved session -->
+                                    <p class="text-sm text-gray-500">ID: ${planId.substring(0, 8)}...</p>
+                                    <p class="text-sm text-gray-500">Generated: ${planData.generatedAt ? planData.generatedAt.toDate().toLocaleString() : 'N/A'}</p>
+                                    <p class="text-sm text-gray-500">Students Seated: ${allotments.length}</p>
+                                 </div>
+                                 <div class="space-x-2">
+                                    <button class="view-plan-btn btn btn-secondary rounded-lg px-3 py-1.5 text-sm font-semibold" data-plan='${JSON.stringify(allotments)}'>View Details</button>
+                                    ${targetRole === 'admin' ? 
+                                        `<button class="export-csv-btn btn btn-success rounded-lg px-3 py-1.5 text-sm font-semibold" 
+                                                data-plan='${JSON.stringify(allotments)}' 
+                                                data-session="${savedSessionId}"> <!-- Use saved session for filename -->
+                                            Export CSV
+                                        </button>` : 
+                                        '' 
+                                    }
+                                 </div>
+                             `;
+                             listElement.appendChild(reportDiv);
+                         }
+                    }); 
+
+                     if (overviewStatPlans) overviewStatPlans.textContent = planCount;
+
+                      // If student search finished and no assignment found in any plan
+                     if(targetRole === 'student' && !foundAssignment){
+                         console.log("Student assignment not found after checking all plans.");
+                          if (studentLoading) studentLoading.classList.add('hidden');
+                          if (studentAssignment) studentAssignment.classList.add('hidden');
+                          if (studentNoAssignment) studentNoAssignment.classList.remove('hidden');
+                     }
+                }
+
+             } catch (error) {
+                 console.error("Error fetching plans:", error);
+                 if(listElement) listElement.innerHTML = `<p class="text-sm text-red-600">Error fetching plans: ${error.message}</p>`;
+                  if (targetRole === 'student') {
+                      if (studentLoading) studentLoading.classList.add('hidden');
+                      if (studentAssignment) studentAssignment.classList.add('hidden'); 
+                      if (studentNoAssignment) {
+                         studentNoAssignment.classList.remove('hidden'); 
+                         studentNoAssignment.textContent = `Error fetching assignment: ${error.message}`; 
+                      }
+                 }
+                  if (overviewStatPlans) overviewStatPlans.textContent = 0;
+             } finally {
+                  if (loadingElement) loadingElement.classList.add('hidden');
+             }
+        }
+
+
+        // --- 8. FIREBASE AUTH LOGIC ---
+        
+        // (Keep V3 - fetches and passes studentId)
+        onAuthStateChanged(auth, async (user) => { 
+              if (user) {
+                const userEmail = user.email; 
+                console.log("User is logged in:", userEmail);
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    const role = userData.role;
+                     currentUserStudentId = userData.studentId || null; 
+                    
+                    if(userEmailDisplays[role]) {
+                         userEmailDisplays[role].textContent = userEmail; 
+                         userEmailDisplays[role].title = userEmail; 
+                    }
+                    
+                    if (role === 'admin') {
+                        showPage('admin');
+                        fetchAndDisplayPlans(reportsList, reportsLoading, null, 'admin'); 
+                        updateRecentActivity(`Admin ${userEmail} logged in.`); 
+                    } else if (role === 'invigilator') {
+                        showPage('invigilator');
+                        fetchAndDisplayPlans(invigReportsList, invigReportsLoading, null, 'invigilator'); 
+                    } else if (role === 'student') {
+                        showPage('student');
+                         if (studentLoading) studentLoading.classList.remove('hidden');
+                         if (studentAssignment) studentAssignment.classList.add('hidden');
+                         if (studentNoAssignment) studentNoAssignment.classList.add('hidden');
+                        if (currentUserStudentId) {
+                            fetchAndDisplayPlans(null, studentLoading, currentUserStudentId, 'student'); 
+                        } else {
+                             console.error("Logged in as student, but no studentId found in user profile!");
+                             if (studentLoading) studentLoading.classList.add('hidden');
+                             if (studentNoAssignment) {
+                                studentNoAssignment.textContent = "Error: Could not find your Student ID.";
+                                studentNoAssignment.classList.remove('hidden');
+                             }
+                        }
+                    } else {
+                        console.warn("User has unknown role:", role);
+                        await signOut(auth);
+                    }
+                } else {
+                    console.error("User doc not found in Firestore! UID:", user.uid);
+                    await signOut(auth); 
+                }
+            } else {
+                currentUserStudentId = null; 
+                console.log("User is logged out.");
+                showPage('login');
+                Object.values(userEmailDisplays).forEach(el => {
+                    if (el) {
+                         el.textContent = '';
+                         el.title = '';
+                    }
+                });
+                 uploadedStudents = [];
+                 uploadedRooms = [];
+                 uploadedExams = [];
+                 updateDashboardStats(); 
+                 // populateSessionSelect(); // Not needed
+                 checkAllFilesUploaded();
+                  if(studentFileStatus) studentFileStatus.textContent = "No file selected.";
+                  if(roomFileStatus) roomFileStatus.textContent = "No file selected.";
+                  if(examFileStatus) examFileStatus.textContent = "No file selected.";
+                 if(overviewStatPlans) overviewStatPlans.textContent = "0";
+                 if(reportsList) reportsList.innerHTML = '<p class="text-sm text-gray-500 italic">No plans fetched yet.</p>';
+                 if(invigReportsList) invigReportsList.innerHTML = '<p class="text-sm text-gray-500 italic">No plans fetched yet.</p>';
+                 if (studentLoading) studentLoading.classList.remove('hidden');
+                 if (studentAssignment) studentAssignment.classList.add('hidden');
+                 if (studentNoAssignment) studentNoAssignment.classList.add('hidden');
+                 if(recentActivityList) recentActivityList.innerHTML = '<p class="italic">No recent activity recorded.</p>'; 
+            }
+        });
+        
+        loginForm.addEventListener('submit', async (e) => { /* ... keep ... */ 
+             e.preventDefault();
+            setAuthLoading('login', true);
+            hideAuthError();
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Login error:", error.message);
+                showAuthError("Invalid email or password."); 
+            }
+            setAuthLoading('login', false);
+        });
+        
+        // (Keep V3 - adds studentId from input)
+        signupForm.addEventListener('submit', async (e) => { 
+             e.preventDefault();
+            setAuthLoading('signup', true);
+            hideAuthError();
+            const email = signupForm['signup-email'].value;
+            const password = signupForm['signup-password'].value;
+            const role = signupForm['signup-role'].value;
+            const studentId = signupStudentIdInput.value.trim(); 
+
+             if (role === 'student' && !studentId) {
+                 showAuthError("Student ID is required for student role.");
+                 setAuthLoading('signup', false);
+                 return; 
+             }
+            
+            try {
+                // 1. Create user
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // 2. Prepare user data
+                const userData = {
+                    email: user.email,
+                    role: role,
+                    uid: user.uid
+                };
+                
+                // *** IF STUDENT, ADD entered studentId ***
+                if (role === 'student') {
+                     userData.studentId = studentId; // Use the entered ID
+                     console.log(`Saving studentId ${studentId} for user ${user.uid}`);
+                }
+                
+                // 3. Save user data
+                const userDocRef = doc(db, "users", user.uid);
+                await setDoc(userDocRef, userData);
+                
+                console.log(`User profile created for ${user.uid} with role ${role}`);
+                
+            } catch (error) {
+                console.error("Sign up error:", error);
+                 let friendlyMessage = "Could not create account.";
+                 if (error.code === 'auth/email-already-in-use') {
+                     friendlyMessage = "This email address is already in use.";
+                 } else if (error.code === 'auth/weak-password') {
+                     friendlyMessage = "Password is too weak (min. 6 characters).";
+                 } else if (error.code === 'auth/invalid-email') {
+                     friendlyMessage = "Please enter a valid email address.";
+                 }
+                showAuthError(friendlyMessage);
+            }
+            
+            setAuthLoading('signup', false);
+        });
+
+        logoutButtons.forEach(button => { /* ... keep ... */ 
+            if (button) { 
+                button.addEventListener('click', async () => {
+                     const userEmail = auth.currentUser?.email || 'User';
+                    await signOut(auth);
+                     console.log(`${userEmail} logged out.`);
+                });
+            }
+        });
+        
+        // --- 9. APP LOGIC (ADMIN DASHBOARD) ---
+
+        // Sidebar Navigation (Simplified Active State Handling)
+        adminNavLinks.forEach(link => { 
+             link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const pageId = link.dataset.page;
+                
+                adminPages.forEach(page => page.classList.add('hidden'));
+                const targetPage = document.getElementById(pageId);
+                if (targetPage) {
+                    targetPage.classList.remove('hidden');
+                }
+                
+                adminNavLinks.forEach(navLink => {
+                    navLink.classList.remove('active', 'bg-indigo-600', 'text-white'); 
+                    navLink.classList.add('text-slate-300'); 
+                });
+                link.classList.add('active', 'bg-indigo-600', 'text-white'); 
+                link.classList.remove('text-slate-300');
+            });
+        });
+        
+        // Quick Action Button Navigation (NEW)
+         quickActionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetPageId = button.dataset.targetPage;
+                const targetNavLink = document.querySelector(`.admin-nav-link[data-page="${targetPageId}"]`);
+                if (targetNavLink) {
+                    targetNavLink.click(); 
+                }
+            });
+         });
+
+        // Refresh Activity Button (NEW)
+         if (refreshActivityBtn) {
+             refreshActivityBtn.addEventListener('click', () => {
+                 updateRecentActivity('Activity manually refreshed.');
+                 fetchAndDisplayPlans(reportsList, reportsLoading, null, 'admin'); 
+             });
+         }
+
+
+        // Event Listeners for File Inputs
+        studentFileInput.addEventListener('change', () => handleFileUpload(studentFileInput, studentFileStatus, 'students'));
+        roomFileInput.addEventListener('change', () => handleFileUpload(roomFileInput, roomFileStatus, 'rooms'));
+        examFileInput.addEventListener('change', () => handleFileUpload(examFileInput, examFileStatus, 'exams'));
+
+         // Clear Data Button (NEW)
+         if(clearDataBtn) {
+             clearDataBtn.addEventListener('click', () => {
+                 uploadedStudents = [];
+                 uploadedRooms = [];
+                 uploadedExams = [];
+                 studentFileStatus.textContent = "No file selected.";
+                 studentFileStatus.className = 'text-sm text-gray-500 italic';
+                 roomFileStatus.textContent = "No file selected.";
+                 roomFileStatus.className = 'text-sm text-gray-500 italic';
+                 examFileStatus.textContent = "No file selected.";
+                 examFileStatus.className = 'text-sm text-gray-500 italic';
+                 updateDashboardStats();
+                 // populateSessionSelect(); // Not needed
+                 checkAllFilesUploaded();
+                 alert("Cleared locally uploaded data for this session.");
+                 updateRecentActivity('Cleared local CSV data.');
+             });
+         }
+
+
+        // Event Listener for "Run Enhanced Planner" (Runs for ALL sessions)
+        btnRunPlanner.addEventListener('click', async () => { 
+             if (!plannerStatus || !planPreviewSection || !plannerError || !unassignedStudentsSectionPreview || 
+                 !unassignedStudentsListPreview || !plannerLoading || !plannerMessage || !btnRunPlanner ||
+                 !planPreviewSummary || !btnSavePlan || !btnDiscardPlan || !saveStatus) {
+                 console.error("One or more planner UI elements are missing!");
+                 return; 
+             }
+             
+            // Reset UI States
+            plannerStatus.classList.remove('hidden');
+            planPreviewSection.classList.add('hidden'); 
+            plannerError.classList.add('hidden'); 
+            plannerLoading.classList.remove('hidden'); 
+            if(plannerMessage) plannerMessage.textContent = "Generating plans for all sessions..."; 
+            btnRunPlanner.disabled = true;
+            currentGeneratedPlan = null; // Clear previous plan
+            saveStatus.textContent = ''; 
+            saveStatus.className = 'text-center mt-3 text-sm'; 
+            
+            // Get unique sessions from uploaded exams
+            const uniqueSessions = [...new Set(uploadedExams.map(exam => exam.session))].filter(Boolean);
+            if (uniqueSessions.length === 0) {
+                 plannerLoading.classList.add('hidden');
+                 plannerError.classList.remove('hidden');
+                 if(plannerErrorMessage) plannerErrorMessage.textContent = "No sessions found in uploaded exam data.";
+                 btnRunPlanner.disabled = !checkAllFilesUploaded(); 
+                 return;
+            }
+            
+            // Use timeout to allow UI update before blocking calculation
+            setTimeout(async () => {
+                let overallResult = { 
+                    plan: [], 
+                    unassignedStudents: [], 
+                    messages: [] 
+                };
+                let criticalErrorOccurred = false;
+
+                console.log(`[Planner Run] Starting planning for sessions: ${uniqueSessions.join(', ')}`);
+                
+                for (const sessionId of uniqueSessions) {
+                    try {
+                        console.log(`[Planner Run] Calling generateEnhancedPlan V7 for session: ${sessionId}`);
+                        const sessionResult = generateEnhancedPlan(uploadedStudents, uploadedRooms, uploadedExams, sessionId); 
+                        console.log(`[Planner Run] Session ${sessionId} result:`, { planLength: sessionResult.plan.length, unassignedCount: sessionResult.unassignedStudents.length, message: sessionResult.message });
+
+                        // Add sessionId to each assignment in the session plan
+                        sessionResult.plan.forEach(assignment => assignment.sessionId = sessionId);
+                        
+                        // Aggregate results
+                        overallResult.plan.push(...sessionResult.plan);
+                        overallResult.unassignedStudents.push(...sessionResult.unassignedStudents);
+                        overallResult.messages.push(`Session '${sessionId}': ${sessionResult.message}`);
+
+                        // Check for critical errors reported by the planner
+                         if (sessionResult.message && (sessionResult.message.toLowerCase().includes('error') || sessionResult.message.toLowerCase().includes('failed') || sessionResult.message.toLowerCase().includes('critical'))) {
+                             // Don't stop, but note the error for the final message
+                             console.error(`Error during planning for session ${sessionId}: ${sessionResult.message}`);
+                             // We will still show preview but might indicate issues
+                         }
+
+                    } catch (error) { // Catch unexpected errors during the loop
+                        console.error(`[Planner Run] Critical Error during planning session ${sessionId}:`, error);
+                        overallResult.messages.push(`Session '${sessionId}': CRITICAL ERROR - ${error.message}`);
+                        criticalErrorOccurred = true;
+                        // Populate unassigned list with all students intended for this session if possible
+                        // (This requires recalculating studentsToSeat for this specific session on error)
+                        // For simplicity, we'll rely on the unassigned list from the function if it partially ran
+                        break; // Stop processing further sessions if one fails critically
+                    }
+                } // End loop through sessions
+
+                // --- Display Aggregate Preview ---
+                plannerLoading.classList.add('hidden');
+                
+                if (criticalErrorOccurred) {
+                     // Show only the critical error message if the loop broke
+                     if(plannerErrorMessage) plannerErrorMessage.textContent = overallResult.messages.join('\n') || "An unknown critical error occurred.";
+                     if(plannerError) plannerError.classList.remove('hidden'); 
+                     updateRecentActivity('Critical error during multi-session plan generation.');
+                     btnRunPlanner.disabled = !checkAllFilesUploaded(); // Re-enable run button after error
+                     return; // Stop here
+                }
+
+                // If no critical errors, show the preview section
+                planPreviewSection.classList.remove('hidden'); 
+
+                // Store aggregated result
+                currentGeneratedPlan = { 
+                    sessionId: 'All Sessions Run', // Indicate this covers multiple
+                    generatedAt: new Date(), 
+                    roomAllotments: overallResult.plan, // Combined list
+                     // Consolidate unique unassigned students
+                    unassignedStudents: [...new Map(overallResult.unassignedStudents.map(item => [item.id, item])).values()] 
+                }; 
+
+                // Update preview summary
+                let summaryHtml = `<p><strong>Sessions Planned:</strong> ${uniqueSessions.join(', ')}</p>`;
+                summaryHtml += `<p><strong class="text-green-600">Total Assigned:</strong> ${overallResult.plan.length} students</p>`;
+                
+                const finalUnassigned = currentGeneratedPlan.unassignedStudents; // Use consolidated list
+                if (finalUnassigned && finalUnassigned.length > 0) {
+                    summaryHtml += `<p><strong class="text-red-600">Total Could Not Assign:</strong> ${finalUnassigned.length} students (Check Capacity/Data)</p>`;
+                    unassignedStudentsListPreview.innerHTML = finalUnassigned.map(s => `<li>${s.id} (${s.name || 'N/A'})</li>`).join('');
+                    unassignedStudentsSectionPreview.classList.remove('hidden');
+                     btnSavePlan.classList.remove('btn-success'); 
+                     btnSavePlan.classList.add('btn-warning');
+                     btnSavePlan.innerHTML = `<svg data-lucide="save" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Incomplete Plan`;
+                } else {
+                     unassignedStudentsSectionPreview.classList.add('hidden');
+                     btnSavePlan.classList.remove('btn-warning'); 
+                     btnSavePlan.classList.add('btn-success');
+                     btnSavePlan.innerHTML = `<svg data-lucide="save" class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Plan to Database`;
+                }
+                planPreviewSummary.innerHTML = summaryHtml;
+                // Add individual session messages if needed
+                planPreviewSummary.innerHTML += `<div class="mt-2 text-xs border-t pt-1">${overallResult.messages.join('<br>')}</div>`;
+                btnSavePlan.disabled = false; // Enable save button
+
+            }, 50); // Small timeout allows spinner to show
+        });
+
+
+        // Event Listener for Saving Plan (NEW)
+        if(btnSavePlan) {
+            btnSavePlan.addEventListener('click', async () => {
+                 if (!currentGeneratedPlan || !currentGeneratedPlan.roomAllotments) {
+                     if (saveStatus) {
+                        saveStatus.textContent = 'Error: No plan data to save.';
+                        saveStatus.className = 'text-center mt-3 text-sm text-red-600';
+                     }
+                    return;
+                }
+                
+                if (btnSavePlan) btnSavePlan.disabled = true;
+                if (btnDiscardPlan) btnDiscardPlan.disabled = true;
+                if (saveStatus) {
+                    saveStatus.textContent = 'Saving...';
+                    saveStatus.className = 'text-center mt-3 text-sm text-blue-600';
+                }
+
+                try {
+                     // Save the aggregated plan
+                     const planToSave = {
+                        sessionId: currentGeneratedPlan.sessionId, // Will be "All Sessions Run" or similar
+                        generatedAt: new Date(), 
+                        roomAllotments: currentGeneratedPlan.roomAllotments, // Contains all assignments with individual sessionIds
+                        // Optionally save aggregated unassigned list
+                         unassignedStudentIds: currentGeneratedPlan.unassignedStudents.map(s => s.id) 
+                    };
+
+                    const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/plans`), planToSave);
+                    console.log("Aggregated plan saved successfully with ID:", docRef.id);
+                     if (saveStatus) {
+                        saveStatus.textContent = `Plan saved successfully (ID: ${docRef.id.substring(0,8)}...).`;
+                        saveStatus.className = 'text-center mt-3 text-sm text-green-600';
+                     }
+                    updateRecentActivity(`Saved aggregated plan for ${currentGeneratedPlan.sessionId}.`);
+                    
+                    // Update stats after successful save
+                    const plansQuery = query(collection(db, `artifacts/${appId}/public/data/plans`));
+                    const plansSnapshot = await getDocs(plansQuery);
+                     const planCount = plansSnapshot.size;
+                     if(statPlans) statPlans.textContent = planCount; 
+                     if(overviewStatPlans) overviewStatPlans.textContent = planCount; 
+
+                     // Hide preview after save
+                     setTimeout(() => { 
+                         if (planPreviewSection) planPreviewSection.classList.add('hidden');
+                         if (btnRunPlanner) btnRunPlanner.disabled = !checkAllFilesUploaded(); 
+                    }, 2000); 
+
+                } catch (error) {
+                    console.error("Error saving plan to Firestore:", error);
+                     if (saveStatus) {
+                        saveStatus.textContent = `Error saving plan: ${error.message}`;
+                        saveStatus.className = 'text-center mt-3 text-sm text-red-600';
+                     }
+                     if (btnSavePlan) btnSavePlan.disabled = false; // Re-enable on error
+                     if (btnDiscardPlan) btnDiscardPlan.disabled = false;
+                     updateRecentActivity(`Error saving aggregated plan.`);
+                }
+            });
+        }
+
+         // Event Listener for Discarding Plan (NEW)
+         if(btnDiscardPlan) {
+            btnDiscardPlan.addEventListener('click', () => {
+                currentGeneratedPlan = null;
+                 if (planPreviewSection) planPreviewSection.classList.add('hidden');
+                 if (btnRunPlanner) btnRunPlanner.disabled = !checkAllFilesUploaded(); // Re-enable run button
+                 if (saveStatus) {
+                    saveStatus.textContent = 'Plan discarded.';
+                    saveStatus.className = 'text-center mt-3 text-sm text-gray-500';
+                 }
+                 console.log("Generated plan discarded.");
+                 updateRecentActivity('Discarded generated plan.');
+            });
+         }
+
+
+        // Event Listener for Fetching Plans (Admin)
+        btnFetchPlans.addEventListener('click', async () => { 
+            fetchAndDisplayPlans(reportsList, reportsLoading, null, 'admin');
+        });
+        
+         // --- 9.5 APP LOGIC (INVIGILATOR DASHBOARD - NEW) ---
+         
+         // Event Listener for Fetching Plans (Invigilator)
+         btnFetchPlansInvig.addEventListener('click', async () => { 
+             fetchAndDisplayPlans(invigReportsList, invigReportsLoading, null, 'invigilator');
+         });
+
+         // Event Delegation for Invigilator Report Buttons 
+         invigReportsList.addEventListener('click', (e) => {
+             const target = e.target;
+             if (target.classList.contains('view-plan-btn')) {
+                 const planDetails = JSON.parse(target.dataset.plan);
+                 const detailsToShow = planDetails.slice(0, 30).map(item => 
+                    `Student: ${item.studentId} (${item.studentName}), Room: ${item.roomId}, Seat: ${item.seat}`
+                 ).join('\n');
+                 alert("Plan Details (Top 30):\n" + detailsToShow + (planDetails.length > 30 ? "\n..." : ""));
+             }
+         });
+
+
+        // Event Delegation for Admin Report Buttons (MODIFIED to handle export)
+        reportsList.addEventListener('click', (e) => {
+            const target = e.target;
+            
+            if (target.classList.contains('view-plan-btn')) {
+                const planDetails = JSON.parse(target.dataset.plan);
+                 const detailsToShow = planDetails.slice(0, 30).map(item => 
+                    `Student: ${item.studentId} (${item.studentName}), Room: ${item.roomId}, Seat: ${item.seat}${item.sessionId ? ', Session: '+item.sessionId : ''}` // Added Session info
+                 ).join('\n');
+                alert("Plan Details (Top 30):\n" + detailsToShow + (planDetails.length > 30 ? "\n..." : ""));
+            }
+            
+            if (target.classList.contains('export-csv-btn')) {
+                const planDetails = JSON.parse(target.dataset.plan);
+                const sessionId = target.dataset.session; // Session ID from button data
+                
+                if (planDetails && planDetails.length > 0) {
+                    try {
+                         // Add sessionId to each allotment if it's missing (for older saves)
+                         planDetails.forEach(item => { if (!item.sessionId) item.sessionId = sessionId; }); 
+                         
+                        const csvString = convertArrayToCSV(planDetails);
+                         // Use a more descriptive filename if it covers multiple sessions
+                         const filename = sessionId === 'All Sessions Run' ? 'seating_plan_all_sessions.csv' : `seating_plan_${sessionId}.csv`;
+                        exportToCSV(csvString, filename);
+                        updateRecentActivity(`Exported plan for ${sessionId}.`); // Log activity
+                    } catch (err) {
+                        console.error("Error creating or exporting CSV:", err);
+                        alert("Error creating CSV for download.");
+                    }
+                } else {
+                    alert("No data found in this plan to export.");
+                }
+            }
+        });
+
+
+        // Demo Sandbox Rendering Removed (Function definition remains but is not called)
+        function renderSandbox() { 
+           // console.log("Sandbox rendering skipped."); 
+        }
+        
+        // --- 10. INITIALIZE THE APP ---
+        
+        function main() {
+            // Activate Lucide icons
+            try {
+                 if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                } else {
+                    console.warn("Lucide library not found or loaded yet.");
+                }
+            } catch (e) {
+                console.error("Lucide icons failed to initialize.", e);
+            }
+            
+            // Set up login/signup mode toggles
+            if (btnShowLogin && btnShowSignup) {
+                btnShowLogin.addEventListener('click', () => toggleAuthMode(true));
+                btnShowSignup.addEventListener('click', () => toggleAuthMode(false));
+            }
+
+            // Set up login role selection buttons
+            roleButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    roleButtons.forEach(btn => btn.classList.remove('selected'));
+                    button.classList.add('selected');
+                    const role = button.dataset.role;
+                     if(loginTitle) loginTitle.textContent = `${role.charAt(0).toUpperCase() + role.slice(1)} Login`;
+                });
+            });
+
+             // **NEW**: Listener for role change in signup to show/hide student ID field
+             if (signupRoleSelect) {
+                 signupRoleSelect.addEventListener('change', toggleStudentIdFieldVisibility);
+                  // Also call it once initially in case 'student' is default
+                  toggleStudentIdFieldVisibility(); 
+             }
+            
+            // Render the "What-If" sandbox (Function call removed)
+
+            // Initialize UI states
+            updateDashboardStats();
+            // populateSessionSelect(); // Not needed
+            checkAllFilesUploaded(); 
+            
+            console.log("App initialized. Waiting on Firebase Auth...");
+        }
+        
+        // Run the app *after* the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', main);
+
+    </script>
+</body>
+</html>
+
